@@ -82,7 +82,6 @@ class AddModal extends Component {
 
     this.state = {
       selectValue,
-
       gray,
       serviceId,
       divideUpstreams,
@@ -162,7 +161,7 @@ class AddModal extends Component {
     if (selectorConditions) {
       selectorConditions.forEach((item, index) => {
         const { paramType, operator, paramName, paramValue } = item;
-        if (!paramType || !operator || !paramValue) {
+        if (!paramType || !operator || (operator !== "isBlank" && !paramValue)) {
           message.destroy();
           message.error(`Line ${index + 1} condition is incomplete`);
           result = false;
@@ -369,7 +368,7 @@ class AddModal extends Component {
                             message: "protocol is required"
                           }
                         ]
-                      })(<Input />)}
+                      })(<Input allowClear />)}
                     </Item>
                   </Col>
                   <Col span={14} style={{marginLeft:"-20px"}}>
@@ -384,7 +383,7 @@ class AddModal extends Component {
                             message: "upstreamUrl is required"
                           }
                         ]
-                      })(<Input />)}
+                      })(<Input allowClear />)}
                     </Item>
                   </Col>
                 </Row>
@@ -458,7 +457,7 @@ class AddModal extends Component {
                       })(<InputNumber style={{ width: "100%" }} />)}
                     </Item>
                   </Col>
-                </Row> 
+                </Row>
               </div>
               <div style={{ width: 64, textAlign: "right" }}>
                 <Icon
@@ -492,7 +491,7 @@ class AddModal extends Component {
                     required: true
                   }
                 ]
-              })(<Input placeholder="serviceId" /> )}
+              })(<Input allowClear placeholder="serviceId" /> )}
               </Item>
             </Col>
             <Col span={3}>
@@ -602,7 +601,8 @@ class AddModal extends Component {
                                     rules,
                                     initialValue: defaultValue
                                   })(
-                                    <Input
+                                    <InputNumber
+                                      precision={0}
                                       addonBefore={
                                         <div style={{ width: labelWidth }}>
                                           {item.label}
@@ -610,7 +610,6 @@ class AddModal extends Component {
                                       }
                                       placeholder={placeholder}
                                       key={fieldName}
-                                      type="number"
                                     />
                                   )}
                                 </Item>
@@ -662,6 +661,7 @@ class AddModal extends Component {
                                     initialValue: defaultValue
                                   })(
                                     <Input
+                                      allowClear
                                       addonBefore={
                                         <div style={{ width: labelWidth }}>
                                           {item.label}
@@ -731,6 +731,7 @@ class AddModal extends Component {
       enabled,
       sort
     } = copyData;
+
     const formData = {
       name,
       type: type.toString(),
@@ -740,7 +741,7 @@ class AddModal extends Component {
       sort
     };
 
-    if (type === 1) {
+    if (formData.type === "1") {
       formData.matchMode = matchMode.toString();
       this.initSelectorCondition({
         selectorConditions: selectorConditions.map(v => {
@@ -756,7 +757,7 @@ class AddModal extends Component {
       });
     }
     form.setFieldsValue(formData);
-    this.setState({ visible: false, selectValue: type.toString() });
+    this.setState({ visible: false, selectValue: formData.type });
   };
 
   onDealChange = (value, item) => {
@@ -775,6 +776,11 @@ class AddModal extends Component {
       if (paramType !== "uri") {
         operatorsFil = operatorsFil.filter(operate => {
           return operate.key !== "pathPattern" ? operate : ""
+        })
+      }
+      if (paramType !== "post" && paramType !== "query" && paramType !== "header" && paramType !== "cookie") {
+        operatorsFil = operatorsFil.filter(operate => {
+          return operate.key !== "isBlank" ? operate : ""
         })
       }
       if (paramType === "uri" || paramType === "host" || paramType === "ip" || paramType === "cookie" || paramType === "domain") {
@@ -841,6 +847,7 @@ class AddModal extends Component {
     else {
       return (
         <Input
+          allowClear
           onChange={e => {
             this.conditionChange(
               index,
@@ -879,7 +886,7 @@ class AddModal extends Component {
       visible
     } = this.state;
 
-    type = `${type}`;
+    type = `${type.toString()}` || "1";
     let { selectorTypeEnums } = platform;
 
     const { getFieldDecorator } = form;
@@ -910,6 +917,7 @@ class AddModal extends Component {
               initialValue: name
             })(
               <Input
+                allowClear
                 placeholder={getIntlContent(
                   "SHENYU.PLUGIN.SELECTOR.LIST.COLUMN.NAME"
                 )}
@@ -945,7 +953,7 @@ class AddModal extends Component {
                   message: getIntlContent("SHENYU.COMMON.INPUTTYPE")
                 }
               ],
-              initialValue: type || "1"
+              initialValue: type
             })(
               <Select
                 placeholder={getIntlContent("SHENYU.COMMON.TYPE")}
@@ -953,7 +961,7 @@ class AddModal extends Component {
               >
                 {selectorTypeEnums.map(item => {
                   return (
-                    <Option key={item.code} value={`${item.code}`}>
+                    <Option key={item.code} value={item.code.toString()}>
                       {getIntlContent(
                         `SHENYU.COMMON.SELECTOR.TYPE.${item.name.toUpperCase()}`,
                         item.name
@@ -1021,6 +1029,7 @@ class AddModal extends Component {
                           }}
                         >
                           <Input
+                            allowClear
                             onChange={e => {
                               this.conditionChange(
                                 index,
@@ -1042,7 +1051,14 @@ class AddModal extends Component {
                           </Select>
                         </Col>
 
-                        <Col span={7}>
+                        <Col
+                          span={7}
+                          style={{
+                            display: item.operator === "isBlank"
+                              ? "none"
+                              : "block"
+                          }}
+                        >
                           <Tooltip title={item.paramValue}>
                             {this.getParamValueInput(item, index)}
                           </Tooltip>
@@ -1139,6 +1155,7 @@ class AddModal extends Component {
               ]
             })(
               <Input
+                allowClear
                 placeholder={getIntlContent("SHENYU.SELECTOR.INPUTORDER")}
               />
             )}

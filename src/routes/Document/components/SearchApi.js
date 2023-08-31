@@ -1,28 +1,29 @@
 /*
-	* Licensed to the Apache Software Foundation (ASF) under one or more
-	* contributor license agreements. See the NOTICE file distributed with
-	* this work for additional information regarding copyright ownership.
-	* The ASF licenses this file to You under the Apache License, Version 2.0
-	* (the "License"); you may not use this file except in compliance with
-	* the License. You may obtain a copy of the License at
-	*
-	* http://www.apache.org/licenses/LICENSE-2.0
-	*
-	* Unless required by applicable law or agreed to in writing, software
-	* distributed under the License is distributed on an "AS IS" BASIS,
-	* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	* See the License for the specific language governing permissions and
-	* limitations under the License.
-	*/
+  * Licensed to the Apache Software Foundation (ASF) under one or more
+  * contributor license agreements. See the NOTICE file distributed with
+  * this work for additional information regarding copyright ownership.
+  * The ASF licenses this file to You under the Apache License, Version 2.0
+  * (the "License"); you may not use this file except in compliance with
+  * the License. You may obtain a copy of the License at
+  *
+  * http://www.apache.org/licenses/LICENSE-2.0
+  *
+  * Unless required by applicable law or agreed to in writing, software
+  * distributed under the License is distributed on an "AS IS" BASIS,
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  */
 
 /* eslint-disable no-unused-expressions */
 
-import { Tree, Empty, message, Typography, Button, Row, Col, Spin } from "antd";
+import { Tree, Empty, message, Typography, Button, Row, Col, Spin, Tooltip } from "antd";
 import React, { useEffect, useImperativeHandle, useState } from "react";
 import { getRootTag, getParentTagId, getApi } from "../../../services/api";
 import { Method } from "./globalData";
 import AddAndUpdateTag from "./AddAndUpdateTag";
 import AddAndUpdateApiDoc from "./AddAndUpdateApiDoc";
+import { getIntlContent } from "../../../utils/IntlUtils";
 
 const { Text } = Typography;
 
@@ -31,8 +32,10 @@ const SearchApi = React.forwardRef((props, ref) => {
   const [loading, setLoading] = useState(false);
   const [treeData, setTreeData] = useState({});
   const [expandedKeys, setExpandedKeys] = useState([]);
+  const [selectedKeys, setSelectedKeys] = useState([]);
 
   const queryRootTag = async () => {
+    setExpandedKeys([]);
     setLoading(true);
     const { code, data = [], message: msg } = await getRootTag();
     setLoading(false);
@@ -47,7 +50,19 @@ const SearchApi = React.forwardRef((props, ref) => {
         key: index.toString(),
         isLeaf: false
       })) || [];
-    setTreeData(arr);
+    if (data?.length) {
+      const { code: apiCode, message: apiMsg, data: apiDataRecords } = await getApi(data[0].id);
+      if (apiCode !== 200) {
+        message.error(apiMsg);
+        return;
+      }
+      const { dataList: apiDataList } = apiDataRecords;
+      data[0].apiDataList = apiDataList;
+      setTreeData(arr);
+      // 默认选中第一个
+      setSelectedKeys(["0"]);
+      onSelect(["0"], { node: { props: arr[0] } })
+    }
   };
 
   const onExpand = async (keys, { expanded, node }) => {
@@ -100,7 +115,8 @@ const SearchApi = React.forwardRef((props, ref) => {
         item.name
       ) : (
         <>
-          <Text code>{Method[item.httpMethod]}</Text> {item.apiPath}
+          <Text code>{Method[item.httpMethod]}</Text>
+          <Tooltip title={item.apiPath}>{item.apiPath}</Tooltip>
         </>
       ),
       key: `${eventKey}-${index}`,
@@ -109,7 +125,7 @@ const SearchApi = React.forwardRef((props, ref) => {
     curNode.children.push({
       selectable: false,
       title: (
-        <Row gutter={8}>
+        <Row gutter={18}>
           {showAddTag && (
             <Col span={12}>
               <Button
@@ -122,7 +138,7 @@ const SearchApi = React.forwardRef((props, ref) => {
                   })
                 }
               >
-                + Tag
+                {getIntlContent("SHENYU.DOCUMENT.APIDOC.SEARCH.ADD_MODULE")}
               </Button>
             </Col>
           )}
@@ -159,7 +175,7 @@ const SearchApi = React.forwardRef((props, ref) => {
 
   const handleTagOk = data => {
     handleTagCancel();
-    updateTree(data);
+    updateTree(data, 'tag');
   };
 
   const [openApi, setOpenApi] = useState(false);
@@ -172,10 +188,11 @@ const SearchApi = React.forwardRef((props, ref) => {
 
   const handleApiOk = data => {
     handleApiCancel();
-    updateTree(data);
+    updateTree(data, 'api');
   };
 
   const addOrUpdateApi = data => {
+    apiForm.resetFields()
     apiForm.setFieldsValue({
       ...data
     });
@@ -189,10 +206,30 @@ const SearchApi = React.forwardRef((props, ref) => {
     setOpenTag(true);
   };
 
-  const updateTree = data => {
-    setExpandedKeys([]);
-    queryRootTag();
-    afterUpdate(data);
+  const updateTree = (data, refType) => {
+    if (!data?.id) {
+      queryRootTag()
+      return
+    }
+    let allNodes = treeData.flatMap(i => i.children ? [...i.children, i] : i)
+    let curNodeIdx = allNodes.findIndex(t => t.id && t.id === data.id) ?? -1
+    if (curNodeIdx === -1) {
+      return
+    }
+    if (refType === 'tag') {
+      allNodes[curNodeIdx].title = data.name
+    } else if (refType === 'api') {
+      allNodes[curNodeIdx].title = (
+        <>
+          <Text code>{Method[data.httpMethod]}</Text>
+          <Tooltip title={data.apiPath}>{data.apiPath}</Tooltip>
+        </>
+      )
+    }
+    // forceUpdate tree
+    setTreeData()
+    setTreeData(treeData)
+    afterUpdate(data, refType);
   };
 
   useImperativeHandle(ref, () => ({
@@ -206,14 +243,19 @@ const SearchApi = React.forwardRef((props, ref) => {
   }, []);
 
   return (
-    <div style={{ overflow: "auto" }}>
+    <div>
       {treeData?.length ? (
         <Spin spinning={loading}>
           <Tree
-            onSelect={onSelect}
+            onSelect={(keys, e) => {
+              setSelectedKeys(keys)
+              onSelect(keys, e)
+            }}
             treeData={treeData}
             onExpand={onExpand}
             expandedKeys={expandedKeys}
+            selectedKeys={selectedKeys}
+            defaultSelectedKeys={["0"]}
           />
         </Spin>
       ) : (
@@ -224,7 +266,7 @@ const SearchApi = React.forwardRef((props, ref) => {
         type="dashed"
         onClick={() => addOrUpdateTag({ parentTagId: "0" })}
       >
-        Add Root Tag
+        {getIntlContent("SHENYU.DOCUMENT.APIDOC.SEARCH.ADD_ROOT_MODULE")}
       </Button>
       <AddAndUpdateTag
         visible={openTag}

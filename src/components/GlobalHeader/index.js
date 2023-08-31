@@ -52,6 +52,16 @@ class GlobalHeader extends PureComponent {
   constructor(props) {
     super(props);
     this.state = {
+      help: (
+        <Menu>
+          <Menu.Item>
+            <span><a href="https://shenyu.apache.org" target="_blank" rel="noreferrer">Website</a></span>
+          </Menu.Item>
+          <Menu.Item>
+            <span><a href="https://github.com/apache/shenyu" target="_blank" rel="noreferrer">Github</a></span>
+          </Menu.Item>
+        </Menu>
+      ),
       menu: (
         <Menu onClick={this.handleLocalesValueChange}>
           <Menu.Item key="0">
@@ -134,13 +144,23 @@ class GlobalHeader extends PureComponent {
       <div className={styles.header}>
         <span className={styles.text}>Apache ShenYu Gateway Management System</span>
         <div>
-          <Dropdown
-            placement="bottomCenter"
-            overlay={this.state.menu}
-          >
-            <Button><TranslationOutlined /></Button>
-          </Dropdown>
-          <div className={styles.right}>
+          <div className={styles.item}>
+            <Dropdown
+              placement="bottomCenter"
+              overlay={this.state.help}
+            >
+              <Button><Icon type="question-circle" /></Button>
+            </Dropdown>
+          </div>
+          <div className={styles.item}>
+            <Dropdown
+              placement="bottomCenter"
+              overlay={this.state.menu}
+            >
+              <Button><TranslationOutlined /></Button>
+            </Dropdown>
+          </div>
+          <div className={`${styles.item} ${styles.right}`}>
             <Dropdown.Button overlay={menu} icon={<Icon type="user" />}>
               <span>
                 {userName}
@@ -149,7 +169,7 @@ class GlobalHeader extends PureComponent {
           </div>
         </div>
         <Modal
-          width="35%"
+          width="40%"
           title={getIntlContent("SHENYU.GLOBALHEADER.CHANGE.PASSWORD")}
           visible={visible}
           forceRender
@@ -207,7 +227,7 @@ class GlobalHeader extends PureComponent {
                     }
                   }
                 ]
-              })(<Input.Password />)}
+              })(<Input.Password allowClear />)}
             </Form.Item>
             <Form.Item
               required
@@ -233,7 +253,7 @@ class GlobalHeader extends PureComponent {
                         );
                         return;
                       }
-                      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&=_+-])[A-Za-z\d@$!%*?&=_+-]{8,}$/.test(value)) {
+                      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#.=_+-])[A-Za-z\d@$!%*?&#.=_+-]{8,}$/.test(value)) {
                         callback(
                           getIntlContent("SHENYU.GLOBALHEADER.PASSWORD.RULE")
                         );
@@ -246,7 +266,7 @@ class GlobalHeader extends PureComponent {
                     }
                   }
                 ]
-              })(<Input.Password />)}
+              })(<Input.Password allowClear />)}
             </Form.Item>
             <Form.Item
               label={getIntlContent("SHENYU.GLOBALHEADER.CONFIRM.PASSWORD")}
@@ -277,7 +297,7 @@ class GlobalHeader extends PureComponent {
                     }
                   }
                 ]
-              })(<Input.Password />)}
+              })(<Input.Password allowClear />)}
             </Form.Item>
           </Form>
         </Modal>

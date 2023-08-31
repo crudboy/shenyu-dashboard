@@ -28,7 +28,7 @@ function ApiInfo(props) {
   const {
     apiData: { envProps = [] },
     apiDetail,
-    apiDetail: { document, responseParameters, requestHeaders }
+    apiDetail: { document, requestParameters, responseParameters, requestHeaders }
   } = useContext(ApiContext);
   const { handleUpdate, handleDelete } = props;
 
@@ -55,8 +55,7 @@ function ApiInfo(props) {
     },
     {
       title: getIntlContent("SHENYU.COMMON.TYPE"),
-      dataIndex: "type",
-      render: (_, record) => record?.schema?.type
+      dataIndex: "type"
     },
     {
       title: getIntlContent("SHENYU.COMMON.REQUIRED"),
@@ -103,21 +102,21 @@ function ApiInfo(props) {
       id: 1,
       name: "code",
       type: "integer",
-      description: "返回码",
+      description: getIntlContent("SHENYU.DOCUMENT.APIDOC.INFO.COMMON.RESPONSE.CODE"),
       example: "200"
     },
     {
       id: 2,
       name: "message",
       type: "string",
-      description: "错误描述信息",
-      example: "非法的参数"
+      description: getIntlContent("SHENYU.DOCUMENT.APIDOC.INFO.COMMON.RESPONSE.DESCRIPTION"),
+      example: getIntlContent("SHENYU.DOCUMENT.APIDOC.INFO.COMMON.RESPONSE.DESCRIPTION_EXAMPLE")
     },
     {
       id: 3,
       name: "data",
       type: "object",
-      description: "响应的业务结果",
+      description: getIntlContent("SHENYU.DOCUMENT.APIDOC.INFO.COMMON.RESPONSE.RESULTS"),
       example: '{"id":"1988771289091030"}'
     }
   ];
@@ -239,7 +238,7 @@ function ApiInfo(props) {
               size="small"
               rowKey="id"
               bordered
-              dataSource={documentJSON.parameters || []}
+              dataSource={requestParameters || []}
               pagination={false}
               childrenColumnName="refs"
               columns={columns}
@@ -264,19 +263,6 @@ function ApiInfo(props) {
             />
           </Paragraph>
           <Title level={4}>
-            {getIntlContent("SHENYU.DOCUMENT.APIDOC.ERROR.CODE.DETAILS")}
-          </Title>
-          <Paragraph>
-            <Table
-              size="small"
-              rowKey="code"
-              bordered
-              dataSource={documentJSON.errorCode || []}
-              pagination={false}
-              columns={errorCodeColumns}
-            />
-          </Paragraph>
-          <Title level={4}>
             {getIntlContent(
               "SHENYU.DOCUMENT.APIDOC.INFO.BUSINESS.RESPONSE.PARAMETERS"
             )}
@@ -290,6 +276,19 @@ function ApiInfo(props) {
               pagination={false}
               childrenColumnName="refs"
               columns={columns}
+            />
+          </Paragraph>
+          <Title level={4}>
+            {getIntlContent("SHENYU.DOCUMENT.APIDOC.ERROR.CODE.DETAILS")}
+          </Title>
+          <Paragraph>
+            <Table
+              size="small"
+              rowKey="code"
+              bordered
+              dataSource={documentJSON.errorCode || []}
+              pagination={false}
+              columns={errorCodeColumns}
             />
           </Paragraph>
         </Tabs.TabPane>

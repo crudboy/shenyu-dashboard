@@ -19,10 +19,8 @@
 
 import { Col, Row, Card, BackTop, Empty, message } from "antd";
 import React, { useEffect, useState } from "react";
-import SearchApi from "./components/SearchApi";
-import ApiInfo from "./components/ApiInfo";
-import TagInfo from "./components/TagInfo";
 import {
+  getApi,
   getDocMenus,
   getApiDetail,
   deleteApi,
@@ -30,6 +28,9 @@ import {
   deleteTag,
   getApiMockRequest
 } from "../../services/api";
+import SearchApi from "./components/SearchApi";
+import ApiInfo from "./components/ApiInfo";
+import TagInfo from "./components/TagInfo";
 import ApiContext from "./components/ApiContext";
 
 function ApiDoc() {
@@ -93,6 +94,13 @@ function ApiDoc() {
         message.error(msg);
         return;
       }
+      const { code: apiCode, message: apiMsg, data: apiDataRecords } = await getApi(id);
+      if (apiCode !== 200) {
+        message.error(apiMsg);
+        return;
+      }
+      const { dataList: apiDataList } = apiDataRecords;
+      data.apiDataList = apiDataList;
       setTagDetail(data);
       setApiDetail({});
     }
@@ -111,7 +119,12 @@ function ApiDoc() {
       message.error(msg);
     } else {
       message.success(msg);
-      searchApiRef.current?.updateTree();
+      if (tagDetail.id) {
+        searchApiRef.current?.updateTree(null, 'tag');
+      }
+      if (apiDetail.id) {
+        searchApiRef.current?.updateTree(null, 'api');
+      }
     }
   };
 
@@ -125,9 +138,12 @@ function ApiDoc() {
   };
 
   // eslint-disable-next-line no-unused-vars
-  const handleAfterUpdate = data => {
-    setApiDetail({});
-    setTagDetail({});
+  const handleAfterUpdate = (data, refType) => {
+    if (refType === 'tag') {
+      setTagDetail({ ...tagDetail, ...data });
+    } else if (refType === 'api') {
+      setApiDetail({ ...apiDetail, ...data });
+    }
   };
 
   useEffect(() => {
@@ -143,16 +159,18 @@ function ApiDoc() {
         tagDetail
       }}
     >
-      <Card style={{ margin: 24 }}>
-        <Row gutter={24}>
-          <Col span={6}>
+      <Row gutter={12}>
+        <Col span={6}>
+          <Card style={{ margin: '24px 0 24px 24px' }}>
             <SearchApi
               onSelect={handleSelectNode}
               ref={searchApiRef}
               afterUpdate={handleAfterUpdate}
             />
-          </Col>
-          <Col span={18}>
+          </Card>
+        </Col>
+        <Col span={18}>
+          <Card style={{ margin: '24px 24px 24px 0' }}>
             {tagDetail.id ? (
               <TagInfo
                 handleUpdate={handleUpdate}
@@ -169,10 +187,10 @@ function ApiDoc() {
               !apiDetail.id && (
                 <Empty description={false} style={{ padding: "160px 0" }} />
               )}
-          </Col>
-        </Row>
-        <BackTop />
-      </Card>
+          </Card>
+        </Col>
+      </Row>
+      <BackTop />
     </ApiContext.Provider>
   );
 }

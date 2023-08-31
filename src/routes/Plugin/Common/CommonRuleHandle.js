@@ -16,7 +16,7 @@
  */
 
 import React, { Component } from "react";
-import { Form, Select, Input, Button, Tooltip, Popconfirm } from "antd";
+import { Form, Select, Input, InputNumber, Button, Tooltip, Popconfirm } from "antd";
 import classnames from "classnames";
 import styles from "../index.less";
 import { getIntlContent } from "../../../utils/IntlUtils";
@@ -46,7 +46,7 @@ export default class CommonRuleHandle extends Component {
         <FormItem style={{ display: "none" }}>
           {getFieldDecorator("handleType", {
             initialValue: pluginHandleList.length ? "1" : "2"
-          })(<Input />)}
+          })(<Input allowClear />)}
         </FormItem>
         <div
           className={styles.handleWrap}
@@ -113,7 +113,8 @@ export default class CommonRuleHandle extends Component {
                                   rules,
                                   initialValue: defaultValue
                                 })(
-                                  <Input
+                                  <InputNumber
+                                    precision={0}
                                     addonBefore={
                                       <div style={{ width: labelWidth }}>
                                         {item.label}
@@ -121,7 +122,6 @@ export default class CommonRuleHandle extends Component {
                                     }
                                     placeholder={placeholder}
                                     key={fieldName}
-                                    type="number"
                                   />
                                 )}
                               </FormItem>
@@ -173,6 +173,7 @@ export default class CommonRuleHandle extends Component {
                                   initialValue: defaultValue
                                 })(
                                   <Input
+                                    allowClear
                                     addonBefore={
                                       <div style={{ width: labelWidth }}>
                                         {item.label}

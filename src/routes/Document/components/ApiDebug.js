@@ -15,9 +15,10 @@
  * limitations under the License.
  */
 
-import {Button, Col, Empty, Form, Icon, Input, message, Row, Tabs, Typography} from "antd";
+import {Button, Col, Empty, Form, Icon, Input, message, Row, Select, Tabs, Typography} from "antd";
 import React, {createRef, forwardRef, useContext, useEffect, useImperativeHandle, useState} from "react";
 import ReactJson from "react-json-view";
+import ReactHtmlParser from "react-html-parser";
 import fetch from "dva/fetch";
 import {
   createOrUpdateMockRequest,
@@ -34,6 +35,7 @@ import {Method} from "./globalData";
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
 const FormItem = Form.Item;
+const InputGroup = Input.Group
 
 const FCForm = forwardRef(({ form, onSubmit }, ref) => {
   useImperativeHandle(ref, () => ({
@@ -42,7 +44,8 @@ const FCForm = forwardRef(({ form, onSubmit }, ref) => {
 
   const {
     apiDetail,
-    apiMock
+    apiMock,
+    apiData: {envProps = []}
   } = useContext(ApiContext);
   const [questJson, setRequestJson] = useState(JSON.parse(apiMock.body || '{}'));
   const [initialValue, setInitialValue] = useState({
@@ -57,6 +60,10 @@ const FCForm = forwardRef(({ form, onSubmit }, ref) => {
     body: apiMock.body
   });
   const [activeKey, setActiveKey] = useState("1");
+
+  const getDefaultHeaderByKey = (key) => {
+    return {"Content-Type": key === '1' ? "application/json" : "application/x-www-form-urlencoded"}
+  }
 
   useEffect(
     () => {
@@ -86,7 +93,14 @@ const FCForm = forwardRef(({ form, onSubmit }, ref) => {
 
   useEffect(
     () => {
-      form.setFieldsValue({headers: initialValue.header || "{}"})
+      setInitialValue({url:apiDetail.apiPath})
+    },
+    [apiDetail.apiPath]
+  )
+
+  useEffect(
+    () => {
+      form.setFieldsValue({headers: initialValue.header || JSON.stringify(getDefaultHeaderByKey(activeKey))})
     },
     [initialValue.header]
   );
@@ -178,8 +192,8 @@ const FCForm = forwardRef(({ form, onSubmit }, ref) => {
   const changeParamTab = (key) => {
     setActiveKey(key);
     let header = form.getFieldsValue().headers;
-    let headerJson = {...JSON.parse(header), "Content-type": key === '1' ? "application/json" : "application/x-www-form-urlencoded"};
-    setInitialValue({...initialValue, header: JSON.stringify(headerJson)})
+    let headerJson = {...JSON.parse(header), ...getDefaultHeaderByKey(key)};
+    setInitialValue({...initialValue, header: JSON.stringify(headerJson)});
   }
 
   return (
@@ -197,7 +211,39 @@ const FCForm = forwardRef(({ form, onSubmit }, ref) => {
               pattern: /^https?:\/\/([^:]+):(\d+)(\/.+)$/
             }
           ]
-        })(<Input allowClear />)}
+        })(
+          <InputGroup compact>
+            <Select
+              style={{width: '40%'}}
+              onChange={host => {
+                const url = new URL(host);
+                host = `${url.protocol}//${url.hostname}:${url.port || '80'}`;
+                setInitialValue({...initialValue, host})
+                const requestUrl = `${host}${initialValue.url ?? ""}`
+                form.setFieldsValue({requestUrl})
+              }}
+              value={initialValue.host}
+            >
+              {Object.values(envProps).map((e, i) => {
+                return (
+                  <Select.Option key={`${e.addressUrl} ${i}`} value={e.addressUrl}>
+                    {`${e.envLabel}  ${e.addressUrl}`}
+                  </Select.Option>
+                );
+              })}
+            </Select>
+            <Input
+              allowClear
+              style={{width: '60%'}}
+              value={initialValue.url}
+              onChange={e => {
+                setInitialValue({...initialValue, url: e.target.value})
+                const requestUrl = `${initialValue.host ?? ""}${e.target.value}`
+                form.setFieldsValue({requestUrl})
+              }}
+            />
+          </InputGroup>
+        )}
       </FormItem>
 
       <FormItem label="Headers">
@@ -314,12 +360,22 @@ function ApiDebug() {
       },
       body: JSON.stringify(params)
     }).then(async response => {
-      const data = await response.json();
+      const textData = await response.text();
+      let jsonData = null;
+      let type = 'text';
+      try {
+        jsonData = JSON.parse(textData);
+        type = 'json';
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(e);
+      }
       setResponseInfo({
         "sandbox-params": response.headers.get("sandbox-params"),
         "sandbox-beforesign": response.headers.get("sandbox-beforesign"),
         "sandbox-sign": response.headers.get("sandbox-sign"),
-        body: data
+        body: type === 'json' ? jsonData : textData,
+        bodyType: type
       });
     });
   };
@@ -376,9 +432,9 @@ function ApiDebug() {
           tab={getIntlContent("SHENYU.DOCUMENT.APIDOC.INFO.REQUEST.RESULTS")}
           key="2"
         >
-          {Object.keys(responseInfo).length ? (
+          {responseInfo.bodyType === 'json' && Object.keys(responseInfo).length ? (
             <ReactJson src={responseInfo.body} name={false} />
-          ) : (
+          ) : responseInfo.body ? ReactHtmlParser(responseInfo.body) : (
             <Empty description={false} />
           )}
         </TabPane>
